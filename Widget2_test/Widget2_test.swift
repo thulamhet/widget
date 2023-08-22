@@ -76,8 +76,7 @@ struct Widget2_testEntryView : View {
                             }
                             TableRowView(customFunction: [.transferMoney, .topUp])
                         }
-                    }.background(Color.red)
-                        .padding(.zero)
+                    }.padding([.trailing, .leading], 0)
                 }
             default:
                 ZStack {
@@ -159,63 +158,48 @@ struct Widget2_test_Previews: PreviewProvider {
 @available(iOS 13.0.0, *)
 struct FunctionView: View {
     let customFunc: CustomFunction
-
+    @State private var hexColor: UInt32 = 0xFF0077
+    
     var body: some View {
         VStack(spacing: 0) {
             Image(customFunc.icon)
                 .resizable()
-                .frame(width: 24, height: 24)
+                .frame(width: 16, height: 16)
             Text(customFunc.funcName)
                 .font(.system(size: 10))
+                .fontWeight(.medium)
+                .foregroundColor(Color(hex: "#2183db"))
                 .multilineTextAlignment(.center)
         }
         .padding(10)
-        .frame(width: 70, height: 70)
+        .frame(width: 82, height: 65)
         .background(Color(UIColor.white))
         .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(LinearGradient(gradient: Gradient(colors: [Color(hex: "#3c93d2"), Color(hex: "#de4d76")]),
+                                        startPoint: .leading, endPoint: .trailing), lineWidth: 1)
+        )
     }
 }
 
 @available(iOS 13.0.0, *)
 struct QRCodeInfoView: View {
-
-    var qrImage: UIImage? {
-        let qrString = UserDefaults.standard.object(forKey: "transferMoneyQR") as? String ?? ""
-        if qrString.isEmpty {
-            return nil
-        }
-
-        let data = qrString.data(using: .utf8)
-        let filter = CIFilter(name: "CIQRCodeGenerator")
-        filter?.setValue(data, forKey: "inputMessage")
-        filter?.setValue("H", forKey: "inputCorrectionLevel")
-        let qrImage = filter?.outputImage
-        let scaleX = CGFloat(500) / (qrImage?.extent.size.width ?? 1.0)
-        let scaleY = CGFloat(500) / (qrImage?.extent.size.height ?? 1.0)
-
-        guard let transformImage = qrImage?.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY)) else {
-            return nil
-        }
-        let scale = UIScreen.main.scale
-        let finalImage = UIImage(ciImage: transformImage, scale: scale, orientation: .up)
-        return finalImage
+    @State private var text = "dsadasd"
+    func getQRCodeDate(text: String) -> Data? {
+          guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
+          let data = text.data(using: .ascii, allowLossyConversion: false)
+          filter.setValue(data, forKey: "inputMessage")
+          guard let ciimage = filter.outputImage else { return nil }
+          let transform = CGAffineTransform(scaleX: 10, y: 10)
+          let scaledCIImage = ciimage.transformed(by: transform)
+          let uiimage = UIImage(ciImage: scaledCIImage)
+          return uiimage.pngData()!
     }
-
-    var accNo: String {
-        UserDefaults.standard.object(forKey: "accNo") as? String ?? "null"
-    }
-
-    var accName: String {
-        UserDefaults.standard.object(forKey: "accName") as? String ?? "null"
-    }
-
+    
     var body: some View {
-        VStack {
-            Image(uiImage: qrImage ?? UIImage(systemName: "person.crop.circle.badge.exclamationmark")!)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: 100, maxHeight: 100)
-        }
+        Image(uiImage: UIImage(data: getQRCodeDate(text: text)!)!)
+                       .resizable()
     }
 }
 
