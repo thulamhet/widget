@@ -46,7 +46,6 @@ struct Widget2_testEntryView : View {
     
     @ViewBuilder
     var body: some View {
-        var screenSize = getWidgetSize(forFamily: family)
         switch family {
             case .systemMedium:
                 ZStack {
@@ -55,13 +54,11 @@ struct Widget2_testEntryView : View {
                     } else {
                         Color.white
                     }
-                    HStack() {
+                    HStack(spacing: 15) {
                         QRCodeInfoView()
-                            .frame(width: screenSize.height - 30, height: screenSize.height - 30)
-                            .padding(.leading)
                         VStack(alignment: .leading) {
                             VStack(alignment: .leading, spacing: 5) {
-                                Text("Tran cong quynh lan")
+                                Text("Tran Cong Quynh Lan")
                                     .font(.system(size: 15))
                                     .fontWeight(.semibold)
                                     .foregroundColor(Color(hex: colorScheme == .light ? "#062a46" : "#ffffff"))
@@ -76,20 +73,32 @@ struct Widget2_testEntryView : View {
                             }
                             TableRowView(customFunction: [.transferMoney, .topUp])
                         }
-                    }.padding([.trailing, .leading], 0)
+                    }.padding(.all, 15)
                 }
             default:
                 ZStack {
-                    Color.primary
-                    HStack(spacing: 30) {
-                        VStack {
-                            TableRowView(customFunction: [.transferMoney, .openSaving])
-                            TableRowView(customFunction: [.topUp, .buyFlightTicket])
-                        }
-                        .padding([.top, .bottom], 20)
-                        QRCodeInfoView()
-                            .padding(.trailing)
+                    if colorScheme == .dark {
+                        LinearGradient(gradient: Gradient(colors: [Color(hex: "#062a46"), Color(hex: "#5b1929")]),startPoint: .leading, endPoint: .trailing)
+                    } else {
+                        Color.white
                     }
+                    VStack(alignment: .leading, spacing: 5) {
+                        QRCodeInfoView()
+                            .frame(width: 70, height: 70)
+                        Text("Tran Cong Quynh Lan")
+                            .font(.system(size: 13))
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color(hex: colorScheme == .light ? "#062a46" : "#ffffff"))
+                        Text("1019991888000")
+                            .font(.system(size: 12))
+                            .fontWeight(.medium)
+                            .foregroundColor(Color(hex: colorScheme == .light ? "#8294a2" : "#d9e1e7"))
+                        Text("VietinBank")
+                            .font(.system(size: 12))
+                            .fontWeight(.medium)
+                            .foregroundColor(Color(hex: colorScheme == .light ? "#8294a2" : "#d9e1e7"))
+                    }
+//                  TableRowView(customFunction: [.transferMoney, .topUp])
                 }
         }
     }
@@ -115,16 +124,16 @@ struct CustomFunction: Identifiable {
     let url: URL
 
     static let transferMoney = CustomFunction(
-        icon: "iconLineCash",
-        funcName: "Chuyển khoản",
+        icon: "x",
+        funcName: "Chuyển tiền",
         url: URL(string: "vietinbankmobilewidget://Transfer")!)
     static let openSaving = CustomFunction(
         icon: "iconHomeMainSavings",
         funcName: "Gửi tiết kiệm",
         url: URL(string: "vietinbankmobilewidget://Openda")!)
     static let topUp = CustomFunction(
-        icon: "iconHomeMainTopup",
-        funcName: "Nạp tiền điện thoại",
+        icon: "x",
+        funcName: "Thanh toán",
         url: URL(string: "vietinbankmobilewidget://Billpay000000")!)
     static let buyFlightTicket = CustomFunction(
         icon: "saokethe",
@@ -159,21 +168,21 @@ struct Widget2_test_Previews: PreviewProvider {
 struct FunctionView: View {
     let customFunc: CustomFunction
     @State private var hexColor: UInt32 = 0xFF0077
-    
+    @Environment(\.colorScheme) var colorScheme
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 5) {
             Image(customFunc.icon)
                 .resizable()
                 .frame(width: 16, height: 16)
             Text(customFunc.funcName)
                 .font(.system(size: 10))
                 .fontWeight(.medium)
-                .foregroundColor(Color(hex: "#2183db"))
+                .foregroundColor(Color(hex: colorScheme == .dark ? "ffffff" : "#2183db"))
                 .multilineTextAlignment(.center)
         }
         .padding(10)
         .frame(width: 82, height: 65)
-        .background(Color(UIColor.white))
+        .background(Color(UIColor.white).opacity(0))
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -198,8 +207,10 @@ struct QRCodeInfoView: View {
     }
     
     var body: some View {
-        Image(uiImage: UIImage(data: getQRCodeDate(text: text)!)!)
-                       .resizable()
+        ZStack {
+            Image(uiImage: UIImage(data: getQRCodeDate(text: text)!)!)
+                .resizable()
+        }
     }
 }
 
