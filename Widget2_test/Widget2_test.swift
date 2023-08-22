@@ -41,10 +41,100 @@ struct SimpleEntry: TimelineEntry {
 struct Widget2_testEntryView : View {
     var entry: Provider.Entry
 
+    @Environment(\.widgetFamily) var family
+    @Environment(\.colorScheme) var colorScheme
+    
+    @ViewBuilder
     var body: some View {
-        Text(entry.date, style: .time)
+        var screenSize = getWidgetSize(forFamily: family)
+        switch family {
+            case .systemMedium:
+                ZStack {
+                    if colorScheme == .dark {
+                        LinearGradient(gradient: Gradient(colors: [Color(hex: "#062a46"), Color(hex: "#5b1929")]),startPoint: .leading, endPoint: .trailing)
+                    } else {
+                        Color.white
+                    }
+                    HStack() {
+                        QRCodeInfoView()
+                            .frame(width: screenSize.height - 30, height: screenSize.height - 30)
+                            .padding(.leading)
+                        VStack(alignment: .leading) {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Tran cong quynh lan")
+                                    .font(.system(size: 15))
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color(hex: colorScheme == .light ? "#062a46" : "#ffffff"))
+                                Text("1019991888000")
+                                    .font(.system(size: 13))
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color(hex: colorScheme == .light ? "#8294a2" : "#d9e1e7"))
+                                Text("VietinBank CN Ha Thanh")
+                                    .font(.system(size: 13))
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color(hex: colorScheme == .light ? "#8294a2" : "#d9e1e7"))
+                            }
+                            TableRowView(customFunction: [.transferMoney, .topUp])
+                        }
+                    }.background(Color.red)
+                        .padding(.zero)
+                }
+            default:
+                ZStack {
+                    Color.primary
+                    HStack(spacing: 30) {
+                        VStack {
+                            TableRowView(customFunction: [.transferMoney, .openSaving])
+                            TableRowView(customFunction: [.topUp, .buyFlightTicket])
+                        }
+                        .padding([.top, .bottom], 20)
+                        QRCodeInfoView()
+                            .padding(.trailing)
+                    }
+                }
+        }
     }
 }
+
+struct TableRowView: View {
+    let customFunction: [CustomFunction]
+    var body: some View {
+        HStack {
+            ForEach(customFunction) { function in
+                Link(destination: function.url) {
+                    FunctionView(customFunc: function)
+                }
+            }
+        }
+    }
+}
+
+struct CustomFunction: Identifiable {
+    let id = UUID()
+    let icon: String
+    let funcName: String
+    let url: URL
+
+    static let transferMoney = CustomFunction(
+        icon: "iconLineCash",
+        funcName: "Chuyển khoản",
+        url: URL(string: "vietinbankmobilewidget://Transfer")!)
+    static let openSaving = CustomFunction(
+        icon: "iconHomeMainSavings",
+        funcName: "Gửi tiết kiệm",
+        url: URL(string: "vietinbankmobilewidget://Openda")!)
+    static let topUp = CustomFunction(
+        icon: "iconHomeMainTopup",
+        funcName: "Nạp tiền điện thoại",
+        url: URL(string: "vietinbankmobilewidget://Billpay000000")!)
+    static let buyFlightTicket = CustomFunction(
+        icon: "saokethe",
+        funcName: "Mua vé máy bay",
+        url: URL(string: "vietinbankmobilewidget://Booking_flight")!)
+
+    static let availableFunctions: [CustomFunction] = [.transferMoney, .openSaving, .topUp, .buyFlightTicket]
+}
+
 
 struct Widget2_test: Widget {
     let kind: String = "Widget2_test"
@@ -63,4 +153,139 @@ struct Widget2_test_Previews: PreviewProvider {
         Widget2_testEntryView(entry: SimpleEntry(date: Date()))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
     }
+}
+
+
+@available(iOS 13.0.0, *)
+struct FunctionView: View {
+    let customFunc: CustomFunction
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Image(customFunc.icon)
+                .resizable()
+                .frame(width: 24, height: 24)
+            Text(customFunc.funcName)
+                .font(.system(size: 10))
+                .multilineTextAlignment(.center)
+        }
+        .padding(10)
+        .frame(width: 70, height: 70)
+        .background(Color(UIColor.white))
+        .cornerRadius(10)
+    }
+}
+
+@available(iOS 13.0.0, *)
+struct QRCodeInfoView: View {
+
+    var qrImage: UIImage? {
+        let qrString = UserDefaults.standard.object(forKey: "transferMoneyQR") as? String ?? ""
+        if qrString.isEmpty {
+            return nil
+        }
+
+        let data = qrString.data(using: .utf8)
+        let filter = CIFilter(name: "CIQRCodeGenerator")
+        filter?.setValue(data, forKey: "inputMessage")
+        filter?.setValue("H", forKey: "inputCorrectionLevel")
+        let qrImage = filter?.outputImage
+        let scaleX = CGFloat(500) / (qrImage?.extent.size.width ?? 1.0)
+        let scaleY = CGFloat(500) / (qrImage?.extent.size.height ?? 1.0)
+
+        guard let transformImage = qrImage?.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY)) else {
+            return nil
+        }
+        let scale = UIScreen.main.scale
+        let finalImage = UIImage(ciImage: transformImage, scale: scale, orientation: .up)
+        return finalImage
+    }
+
+    var accNo: String {
+        UserDefaults.standard.object(forKey: "accNo") as? String ?? "null"
+    }
+
+    var accName: String {
+        UserDefaults.standard.object(forKey: "accName") as? String ?? "null"
+    }
+
+    var body: some View {
+        VStack {
+            Image(uiImage: qrImage ?? UIImage(systemName: "person.crop.circle.badge.exclamationmark")!)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: 100, maxHeight: 100)
+        }
+    }
+}
+
+func getWidgetSize(forFamily family:WidgetFamily) -> CGSize {
+    switch family {
+    case .systemSmall:
+        switch UIScreen.main.bounds.size {
+        case CGSize(width: 428, height: 926):   return CGSize(width:170, height: 170)
+        case CGSize(width: 414, height: 896):   return CGSize(width:169, height: 169)
+        case CGSize(width: 414, height: 736):   return CGSize(width:159, height: 159)
+        case CGSize(width: 390, height: 844):   return CGSize(width:158, height: 158)
+        case CGSize(width: 375, height: 812):   return CGSize(width:155, height: 155)
+        case CGSize(width: 375, height: 667):   return CGSize(width:148, height: 148)
+        case CGSize(width: 360, height: 780):   return CGSize(width:155, height: 155)
+        case CGSize(width: 320, height: 568):   return CGSize(width:141, height: 141)
+        default:                                return CGSize(width:155, height: 155)
+        }
+    case .systemMedium:
+        switch UIScreen.main.bounds.size {
+        case CGSize(width: 428, height: 926):   return CGSize(width:364, height: 170)
+        case CGSize(width: 414, height: 896):   return CGSize(width:360, height: 169)
+        case CGSize(width: 414, height: 736):   return CGSize(width:348, height: 159)
+        case CGSize(width: 390, height: 844):   return CGSize(width:338, height: 158)
+        case CGSize(width: 375, height: 812):   return CGSize(width:329, height: 155)
+        case CGSize(width: 375, height: 667):   return CGSize(width:321, height: 148)
+        case CGSize(width: 360, height: 780):   return CGSize(width:329, height: 155)
+        case CGSize(width: 320, height: 568):   return CGSize(width:292, height: 141)
+        default:                                return CGSize(width:329, height: 155)
+        }
+    case .systemLarge:
+        switch UIScreen.main.bounds.size {
+        case CGSize(width: 428, height: 926):   return CGSize(width:364, height: 382)
+        case CGSize(width: 414, height: 896):   return CGSize(width:360, height: 379)
+        case CGSize(width: 414, height: 736):   return CGSize(width:348, height: 357)
+        case CGSize(width: 390, height: 844):   return CGSize(width:338, height: 354)
+        case CGSize(width: 375, height: 812):   return CGSize(width:329, height: 345)
+        case CGSize(width: 375, height: 667):   return CGSize(width:321, height: 324)
+        case CGSize(width: 360, height: 780):   return CGSize(width:329, height: 345)
+        case CGSize(width: 320, height: 568):   return CGSize(width:292, height: 311)
+        default:                                return CGSize(width:329, height: 345)
+        }
+        
+    default:                                return CGSize(width:329, height: 345)
+    }
+}
+
+@available(iOS 13.0.0, *)
+extension Color {
+ init(hex: String) {
+     let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+     var int: UInt64 = 0
+     Scanner(string: hex).scanHexInt64(&int)
+     let a, r, g, b: UInt64
+     switch hex.count {
+     case 3: // RGB (12-bit)
+         (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+     case 6: // RGB (24-bit)
+         (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+     case 8: // ARGB (32-bit)
+         (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+     default:
+         (a, r, g, b) = (1, 1, 1, 0)
+     }
+
+     self.init(
+         .sRGB,
+         red: Double(r) / 255,
+         green: Double(g) / 255,
+         blue:  Double(b) / 255,
+         opacity: Double(a) / 255
+     )
+ }
 }
